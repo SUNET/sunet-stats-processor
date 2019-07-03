@@ -1,0 +1,13 @@
+bin/
+env/
+.idea/
+certs/
+accounts/
+*pycache*
+*mypy_cache*
+*~
+\#*
+accounts.yaml
+data/
+dehydrated_client/dehydrated
+config.yaml
