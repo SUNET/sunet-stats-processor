@@ -66,7 +66,10 @@ class Context(object):
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(module)s - %(levelname)s - %(message)s')
             sh.setFormatter(formatter)
             self.logger.addHandler(sh)
-            self.logger.setLevel(logging.DEBUG)
+            if config.get('DEBUG', os.environ.get('STATS_PROCESSOR_DEBUG')):
+                self.logger.setLevel(logging.DEBUG)
+            else:
+                self.logger.setLevel(logging.INFO)
 
 
 class LogRequests(object):
@@ -108,6 +111,9 @@ class WriteResource(BaseResource):
                     self.context.logger.warning(f'Failed to parse {repr(this)}')
                     pass
 
+        num_entries = len(res)
+        num_deltas = 0
+
         # sort based on timestamp if telegraf sends us more than one value at once
         for this in sorted(counters, key=lambda x: x.ts):
             self.context.logger.debug(f'Processing {this}')
@@ -138,9 +144,11 @@ class WriteResource(BaseResource):
             res += [output]
 
             self.context.logger.debug(f'Adding {output}')
+            num_deltas += 1
 
         result = requests.post(f'{self.context.influx_url}{req.relative_uri}', data=b'\n'.join(res))
         self.context.logger.debug(f'Proxy "write" result: {result} {result.text}')
+        self.context.logger.info(f'Forwarded {num_entries} entries (added {num_deltas} deltas)')
         resp.status = f'{result.status_code} {result.reason}'
 
     def _calculate_age(self, this: ParsedLine, previous: ParsedLine) -> float:
@@ -185,4 +193,4 @@ api = falcon.API(middleware=LogRequests(context))
 api.add_route('/write', WriteResource(context=context))
 api.add_route('/query', QueryResource(context=context))
 
-context.logger.info(f'app running (forwarding to influxdb at {context.influx_url}...')
+context.logger.info(f'app running (forwarding to influxdb at {context.influx_url})...')
