@@ -1,0 +1,24 @@
+builders:
+  - script
+triggers:
+  cron: "@weekly"
+clean_workspace: true
+publish_over_ssh:
+  - pypi.sunet.se
+
+extra_jobs:
+  - name: sunet-stats-processor-docker
+    builders:
+      - docker
+    docker_name: stats-processor
+    managed_scripts:
+      - docker_build_prep.sh
+      - docker_tag.sh
+    triggers:
+      github_push: false
+      cron: null
+    upstream:
+      - sunet-stats-processor
+
+script:
+  - "echo no tests yet"
