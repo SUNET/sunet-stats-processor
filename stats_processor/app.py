@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import logging.config
+import os
 import sys
 from dataclasses import dataclass, replace
 from os import environ
@@ -50,8 +51,9 @@ class Context(object):
     def __init__(self, config: Mapping):
         self.config = config
         self.history: Dict[bytes, ParsedLine] = {}
-        self.max_age = int(self.config.get('MAX_AGE', 21))
-        self.influx_url = config.get('INFLUX_URL', 'http://localhost:8086/')
+        self.max_age = int(self.config.get('MAX_AGE', os.environ.get('STATS_PROCESSOR_MAX_AGE', 21)))
+        self.influx_url = config.get('INFLUX_URL', os.environ.get('STATS_PROCESSOR_INFLUX_URL',
+                                                                  'http://localhost:8086/'))
         while self.influx_url.endswith('/'):
             self.influx_url = self.influx_url[:-1]
 
@@ -183,4 +185,4 @@ api = falcon.API(middleware=LogRequests(context))
 api.add_route('/write', WriteResource(context=context))
 api.add_route('/query', QueryResource(context=context))
 
-context.logger.info('app running...')
+context.logger.info(f'app running (forwarding to influxdb at {context.influx_url}...')
