@@ -112,6 +112,7 @@ class WriteResource(BaseResource):
                     pass
 
         num_entries = len(res)
+        num_counters = len(counters)
         num_deltas = 0
 
         # sort based on timestamp if telegraf sends us more than one value at once
@@ -146,9 +147,16 @@ class WriteResource(BaseResource):
             self.context.logger.debug(f'Adding {output}')
             num_deltas += 1
 
-        result = requests.post(f'{self.context.influx_url}{req.relative_uri}', data=b'\n'.join(res))
+        url = f'{self.context.influx_url}{req.relative_uri}'
+        result = requests.post(url, data=b'\n'.join(res))
         self.context.logger.debug(f'Proxy "write" result: {result} {result.text}')
-        self.context.logger.info(f'Forwarded {num_entries} entries (added {num_deltas} deltas)')
+
+        self.context.logger.info(f'Forwarded {num_entries} entries '
+                                 f'({num_counters} counters, added {num_deltas} deltas)')
+
+        if result.status_code != 204:
+            self.context.logger.error(f'Proxy "write" to {url} failed: '
+                                      f'{result.status_code} {result.reason} / {result.text}')
         resp.status = f'{result.status_code} {result.reason}'
 
     def _calculate_age(self, this: ParsedLine, previous: ParsedLine) -> float:
