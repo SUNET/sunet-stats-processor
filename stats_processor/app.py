@@ -138,6 +138,11 @@ class WriteResource(BaseResource):
 
             delta = this.value - previous.value
 
+            if delta < 0:
+                self.context.logger.warning(f'Calculated delta {delta} < 0 from this {this} and previous {previous} '
+                                            f'- skipping')
+                continue
+
             self.context.history[this.name] = this
             updated = replace(this, value=delta)
             output = updated.to_bytes()
