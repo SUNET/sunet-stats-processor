@@ -124,32 +124,30 @@ class WriteResource(BaseResource):
                 continue
 
             previous = self.context.history[this.name]
+            self.context.history[this.name] = this
+
             age = self._calculate_age(this, previous)
             if age > self.context.max_age:
                 self.context.logger.info(f'Previous value too old ({age} seconds), re-registering counter: {this}')
-                self.context.history[this.name] = this
                 continue
 
             if this.value < previous.value:
                 self.context.logger.info(f'New value {this.value} is less than previous value {previous.value}, '
                                          f're-registering counter: {this}')
-                self.context.history[this.name] = this
                 continue
 
             delta = this.value - previous.value
-
             if delta < 0:
-                self.context.logger.warning(f'Calculated delta {delta} < 0 from this {this} and previous {previous} '
-                                            f'- skipping')
+                self.context.logger.warning(f'Calculated delta {delta} < 0 from previous {previous}, '
+                                            f're-registering counter: {this}')
                 continue
 
-            self.context.history[this.name] = this
             updated = replace(this, value=delta)
             output = updated.to_bytes()
 
+            self.context.logger.debug(f'Adding {output}')
             res += [output]
 
-            self.context.logger.debug(f'Adding {output}')
             num_deltas += 1
 
         url = f'{self.context.influx_url}{req.relative_uri}'
